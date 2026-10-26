@@ -135,9 +135,9 @@ main --> infra
 - 在真实终端确认 svg> 提示符、创建、移动、撤销和 tree；对生成的 SVG 使用系统已有 sharp 渲染并查看 PNG，确认矩形、中文和连线可见。渲染工具不成为项目依赖。
 - 包脚本直接调用本地 tsc，避免嵌套 npm 对本机 PATH 的额外要求。
 - 重新 npm ci 后，39 项测试和 npm run check 通过；直接调用 npm run cli 与 Windows run-cli.cmd 均成功启动并正常读到 EOF。
-- 增加 GitHub Actions 配置，计划在 Windows/Ubuntu、Node 22/24 下以 npm ci + npm test 验证；云端结果以实际运行记录为准。
+- 增加 GitHub Actions 配置，并在 Windows/Ubuntu、Node 22/24 四个环境下以 npm ci + npm test 验证，四组均成功；见下方实际运行记录。
 
-阶段 1–6 的可核对提交依次为 2679f8f、dc8c6a7、c205ec9、79f81b6、71eedd4、3992898。阶段 7 与 final 标签在交付检查后创建。
+阶段 1–7 的可核对提交依次为 2679f8f、dc8c6a7、c205ec9、79f81b6、71eedd4、3992898、d1424e2。本次验收记录作为最后一个独立文档提交，final 标签指向验收完成后的最终提交。
 
 ## 一致性自查
 
@@ -174,5 +174,11 @@ Node 24.19.0、TypeScript 7.0.2、@xmldom/xmldom 0.9.12；严格编译通过，3
 - [x] 架构规则静态扫描与抽查。
 
 本地结果不等同于全 SVG 标准验证；有限导入范围与 O(n) 快照内存取舍已在架构方案中说明。PlantUML 与 CI 的使用方式参考其官方格式；依赖行为通过已安装代码与类型声明核对。
+
+### 云端验收证据
+
+[GitHub Actions 运行 40288884510](https://github.com/eqepety/-lab1-svg-/actions/runs/40288884510) 对应 d1424e2：Ubuntu/Node 22、Ubuntu/Node 24、Windows/Node 22、Windows/Node 24 全部 success。每个作业从干净环境执行 npm ci 与 npm test，覆盖相同的 39 项测试。本验收记录之后没有修改生产代码。
+
+标签与分支一致性可复核：`git rev-parse HEAD`、`git rev-parse final^{commit}` 和远程 `git ls-remote origin refs/heads/main refs/tags/final^{}` 应指向同一提交。annotated final 标签使用真实创建时间。
 
 课程截止时间尚未提供。final 使用真实完成时间创建，不回填时间、不虚构开发或人工审核记录。
