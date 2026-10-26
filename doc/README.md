@@ -20,6 +20,10 @@
 | test/ | 模型、历史、CLI、IO、真实进程和架构验收 | 被测模块、Node 测试库 |
 | examples/ | 可回放脚本和 SVG 输入 | 无 |
 
+可复用的 PlantUML 源文件见 [architecture.puml](architecture.puml)。
+
+![模块依赖图](architecture.svg)
+
 ```plantuml
 @startuml
 skinparam componentStyle rectangle
@@ -41,13 +45,21 @@ main --> infra
 
 保护领域模型：替换终端、文件系统或 XML 库不应改变几何行为。application 不能导入 infrastructure；任何反向导入均为待修复项。
 
-### 设计模式的选择与落地计划
+### 设计模式的选择与代码落地
 
 1. **Command（必须）**：编辑行为各由独立命令类封装，历史管理器调用 execute / undo / redo。CLI 只构造对象，不实现几何逻辑。
 2. **Composite**：Shape 定义共同操作；Group 持有子图形，递归移动、缩放。命令统一处理容器和叶子，不按标签分支。
 3. **Memento**：编辑在文档副本上执行，成功才发布并记录前后快照。undo/redo 恢复快照，避免逆操作遗漏父级、顺序或浮点精度。单次 O(n) 复制和额外内存是本阶段接受的取舍。
 4. **Factory / 注册表**：图形类型与命令名分别集中映射到构造行为。
 5. **端口与适配器**：文件系统与 XML 在外层，通过存储接口接入。
+
+| 模式 | 实际类 / 代码位置 |
+| --- | --- |
+| Command | application/EditCommand.ts、commands/ 中 10 个具体编辑命令；History 调用 execute/undo/redo |
+| Composite | domain/Shape.ts、Group.ts 与五种叶子；move/scale/clone 均通过多态递归 |
+| Memento | EditCommand 内私有 before/after 文档快照；SvgDocument.clone 深复制整棵树 |
+| Factory / 注册表 | application/ShapeFactory.ts、cli/CommandDispatcher.ts |
+| IO 端口 | application/SvgStore.ts；infrastructure/FileSvgStore.ts 实现，SvgCodec 负责 XML |
 
 **仅两处按名字分派**：CLI 命令注册表与图形工厂。按题目要求，标为后续待重构点：下一阶段改由插件声明注册项。本次不做动态加载和插件生命周期。属性白名单查表仅用于属性校验，不根据图形类型分派业务行为。
 
@@ -79,7 +91,7 @@ main --> infra
 - 用户要求分阶段完成，禁止 one-shot。范围固定在本仓库，不改其他项目或全局 Git、Node、代理配置。
 - 明确 box 不属本阶段、顶层 g 禁止 ungroup、颜色 # 不能当行内注释。
 - 先记录方案与边界，再实现。采用 Command + 副本提交，确保 group/delete/addto 恢复树结构和顺序。
-- 当前为开发前方案，尚未把计划描述为验证结果。
+- 此阶段提交的是开发前方案，当时尚未把计划描述为验证结果；后续记录保留实际实现和验证结果。
 
 ### 阶段 2：工程与领域模型（2026-10-26）
 
@@ -117,33 +129,50 @@ main --> infra
 - 编写自动目录/导入检查并抽查领域类与命令类。当前安装的 TypeScript 7 包未提供旧 createSourceFile API，因此不引入额外解析依赖，改用源码声明/import 静态扫描。扫描适用于本仓库的静态导入写法，不宣称覆盖任意 TypeScript 语法。
 - strict 编译、39 项测试通过，包含 3 项真实进程验收、2 项架构检查和 3 项补充回归。未把生成阶段记录伪装成人工发现；这里的审查、修复和测试由 AI 实际执行。
 
-### 计划提交阶段
+### 阶段 7：交付整理（2026-10-26）
 
-1. 架构与验收基线。
-2. TypeScript 工程、领域模型与 Composite 测试。
-3. Command、事务编辑、历史与树操作测试。
-4. CLI 分词、注册分发和输出。
-5. SVG 读写、缺失 id、文件错误与 round-trip。
-6. 真实进程回放、边界修复、使用说明、一致性自查。
-7. 检查通过后推送最终提交并创建 final 标签。
+- 提供 README 使用方法、Windows run-cli.cmd 和可读 PlantUML 源文件；示例 SVG 由真实 CLI 生成。
+- 在真实终端确认 svg> 提示符、创建、移动、撤销和 tree；对生成的 SVG 使用系统已有 sharp 渲染并查看 PNG，确认矩形、中文和连线可见。渲染工具不成为项目依赖。
+- 包脚本直接调用本地 tsc，避免嵌套 npm 对本机 PATH 的额外要求。
+- 重新 npm ci 后，39 项测试和 npm run check 通过；直接调用 npm run cli 与 Windows run-cli.cmd 均成功启动并正常读到 EOF。
+- 增加 GitHub Actions 配置，计划在 Windows/Ubuntu、Node 22/24 下以 npm ci + npm test 验证；云端结果以实际运行记录为准。
+
+阶段 1–6 的可核对提交依次为 2679f8f、dc8c6a7、c205ec9、79f81b6、71eedd4、3992898。阶段 7 与 final 标签在交付检查后创建。
 
 ## 一致性自查
 
-开发前：尚无生产代码。最终按实际目录和 import 关系填写结果；架构修订留下原因。
+1. **模块划分一致**：src 下实际为 domain/application/infrastructure/cli 四个模块和 main.ts 组合根；commands 是 application 内部子目录。没有为未来 box 提前创建插件目录。
+2. **依赖方向符合规则**：自动扫描当前全部静态 import，未发现反向依赖；domain/application 没有 Node 或 XML 库导入。CLI 只用 Node readline/stream，文件 IO 全部位于 infrastructure。CLI 使用 Node 交互模块这一允许项已在阶段 4 修订说明。
+3. **人工式抽查由 AI 执行**：MoveCommand 仅调用 Shape.move；Group 递归调用子对象 move/scale；EditorSession 仅依赖 SvgStore 接口；FileSvgStore 通过接口被组合根注入，application 不认识其具体类。
+4. **范式检查**：每个生产类与文件同名，一个文件最多一个类；无顶层自由函数和 switch。SvgStore.ts 仅声明端口/返回 DTO；main.ts 仅为组合根。DTO 和分词结果不承担领域行为，领域对象的状态保留在封装类中。
+5. **待重构项仍明确保留**：工厂/命令集中注册改为插件注册；全量快照换差量以支持大文档。当前没有违反层级的遗留依赖。
 
 ## 质量保证手段
 
-### 验收清单（待实现）
+### 本地验收结果
 
-- [ ] strict TypeScript 编译；一类一文件、字段封装与多态。
-- [ ] 六种图形、白名单、浮点、中文、空文字与引号。
-- [ ] 全局大小写敏感 id；子树和导入保持唯一性。
-- [ ] 全部编辑命令、嵌套、顺序、循环与顶层解组限制。
-- [ ] 每命令一个历史单元、失败原子性、redo 分支、IO 屏障。
-- [ ] XML 嵌套、转义、默认样式、重复/缺失 id、损坏文件。
-- [ ] save/read/save 保持图形、结构与支持的显示属性。
-- [ ] 典型会话与流程图 A 回放，保存的 SVG 可预览。
-- [ ] 错误统一单行 error；错误后 REPL 继续。
-- [ ] 依赖抽查与自动检查；本地/远程提交和 final 标签一致。
+Node 24.19.0、TypeScript 7.0.2、@xmldom/xmldom 0.9.12；严格编译通过，39 项自动测试通过。
+
+| 测试文件 | 证明的行为 |
+| --- | --- |
+| domain.test.ts（6） | 六类型几何、克隆隔离、属性校验、id、树结构和顺序 |
+| history.test.ts（8） | 原子失败、精确撤销、全部结构编辑、redo 分支、IO 成败屏障 |
+| cli.test.ts（7） | 引号/颜色/路径、19 命令帮助、指定错误、展示与流回放 |
+| io.test.ts（10） | XML 与文件 round-trip、id 补全、变换、失败保持、保存路径 |
+| integration.test.ts（3） | 真实 Node 进程执行题目会话、流程图和全部编辑流程 |
+| architecture.test.ts（2） | 文件/类命名、静态 import 层级、无自由函数与 switch |
+| regression.test.ts（3） | 根 id 冲突、非 text 内容、box 标记降级 |
+
+- [x] strict 编译与面向对象约束。
+- [x] 六种图形、白名单、浮点、中文、空文字和引号。
+- [x] 全局大小写敏感 id，导入补名避让。
+- [x] 全部命令、嵌套、顺序、循环和顶层解组限制。
+- [x] 一条编辑一次历史、失败原子性、redo 分支和 IO 屏障。
+- [x] XML 转义、默认属性、损坏文件与 round-trip。
+- [x] 题目两个会话真实回放，输出 SVG 实际渲染检查。
+- [x] 错误单行前缀且 REPL 继续。
+- [x] 架构规则静态扫描与抽查。
+
+本地结果不等同于全 SVG 标准验证；有限导入范围与 O(n) 快照内存取舍已在架构方案中说明。PlantUML 与 CI 的使用方式参考其官方格式；依赖行为通过已安装代码与类型声明核对。
 
 课程截止时间尚未提供。final 使用真实完成时间创建，不回填时间、不虚构开发或人工审核记录。

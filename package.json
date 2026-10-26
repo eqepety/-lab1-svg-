@@ -8,10 +8,10 @@
     "node": ">=22.0.0"
   },
   "scripts": {
-    "cli": "npm run build --silent && node dist/src/main.js",
+    "cli": "tsc -p tsconfig.json && node dist/src/main.js",
     "build": "tsc -p tsconfig.json",
-    "test": "npm run build --silent && node --test dist/test/*.test.js",
-    "check": "npm test"
+    "test": "tsc -p tsconfig.json && node --test dist/test/*.test.js",
+    "check": "tsc -p tsconfig.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

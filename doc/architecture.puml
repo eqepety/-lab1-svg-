@@ -1,0 +1,17 @@
+@startuml
+skinparam componentStyle rectangle
+skinparam backgroundColor white
+package "src/cli" as cli
+package "src/application" as app
+package "src/domain" as domain
+package "src/infrastructure" as infra
+component "main.ts\nComposition root" as main
+cli --> app : commands / session
+cli --> domain : read-only inspection
+app --> domain : edit shape tree
+infra --> app : implements IO port
+infra --> domain : encode / decode
+main --> cli
+main --> app
+main --> infra
+@enduml

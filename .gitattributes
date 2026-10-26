@@ -5,3 +5,5 @@
 *.svg text eol=lf
 *.txt text eol=lf
 *.puml text eol=lf
+*.cmd text eol=crlf
+*.yml text eol=lf

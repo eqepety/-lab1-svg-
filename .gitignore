@@ -2,6 +2,7 @@
 .tools/
 .tmp/
 dist/
+/demo.svg
 
 logs
 *.log
