@@ -71,7 +71,7 @@ export class SvgCodec {
       transform.apply(shape, effective);
       document.add(shape, parent);
       for (const child of children) importElement(child, id, transform, effective);
-      if (shape.asGroup()) this.assertNoLooseText(element);
+      if (shape.textContent() === null) this.assertNoLooseText(element);
     };
     for (const element of this.elements(root)) importElement(element, undefined, rootTransform, rootAttrs);
     this.assertNoLooseText(root);

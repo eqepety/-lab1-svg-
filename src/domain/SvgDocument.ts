@@ -16,7 +16,14 @@ export class SvgDocument {
   get height(): number { return this.canvasHeight; }
   children(): readonly Shape[] { return this.rootNode.children(); }
   rootAttributes(): Readonly<Record<string, string>> { return { ...this.rootPresentation }; }
-  importRootAttributes(attrs: Readonly<Record<string, string>>): void { this.rootPresentation = { ...attrs }; }
+  importRootAttributes(attrs: Readonly<Record<string, string>>): void {
+    const id = attrs['id'];
+    if (id !== undefined) {
+      if (!id || /\s/u.test(id)) throw new Error('id must be non-empty and contain no whitespace');
+      if (this.find(id)) throw new Error(`id already exists: ${id}`);
+    }
+    this.rootPresentation = { ...attrs };
+  }
   resize(width: number, height: number): void {
     Numeric.positive(width, 'canvas width'); Numeric.positive(height, 'canvas height');
     this.canvasWidth = width; this.canvasHeight = height;
@@ -46,6 +53,8 @@ export class SvgDocument {
   add(shape: Shape, containerId?: string): void {
     const parent = containerId === undefined ? this.rootNode : this.requireGroup(containerId);
     const ids = new Set(this.allShapes().map(node => node.id));
+    const rootId = this.rootPresentation['id'];
+    if (rootId !== undefined) ids.add(rootId);
     for (const node of [shape, ...this.descendants(shape)]) {
       if (ids.has(node.id)) throw new Error(`id already exists: ${node.id}`);
       ids.add(node.id);
@@ -58,7 +67,7 @@ export class SvgDocument {
     return shape;
   }
   group(id: string, selectedIds: readonly string[]): Group {
-    if (this.find(id)) throw new Error(`id already exists: ${id}`);
+    if (this.find(id) || this.rootPresentation['id'] === id) throw new Error(`id already exists: ${id}`);
     if (selectedIds.length === 0) throw new Error('group needs at least one shape');
     if (new Set(selectedIds).size !== selectedIds.length) throw new Error('duplicate shape in group selection');
     for (const selectedId of selectedIds) this.require(selectedId);
