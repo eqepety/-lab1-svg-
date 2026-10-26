@@ -8,6 +8,7 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "cli": "npm run build --silent && node dist/src/main.js",
     "build": "tsc -p tsconfig.json",
     "test": "npm run build --silent && node --test dist/test/*.test.js",
     "check": "npm test"
@@ -15,5 +16,8 @@
   "devDependencies": {
     "@types/node": "24.19.2",
     "typescript": "7.0.2"
+  },
+  "dependencies": {
+    "@xmldom/xmldom": "0.9.12"
   }
 }

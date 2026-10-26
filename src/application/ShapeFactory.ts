@@ -45,9 +45,11 @@ export class ShapeFactory {
 
   fromSvg(type: string, id: string, attributes: Readonly<Record<string, string>>, content: string): Shape {
     const definition = this.definition(type);
-    const numbers = definition.geometry.map(key => Numeric.parse(attributes[key] ?? '0', key));
+    const numbers = definition.geometry.map(key => Numeric.parse((attributes[key] ?? '0').trim().replace(/px$/u, ''), key));
     const shape = definition.build(id, numbers, content);
-    shape.importPresentation(attributes);
+    const presentation = { ...attributes };
+    if (presentation['stroke-width'] !== undefined) presentation['stroke-width'] = presentation['stroke-width'].trim().replace(/px$/u, '');
+    shape.importPresentation(presentation);
     return shape;
   }
 
